@@ -1,10 +1,11 @@
 ''' Simple Neural Network 
 # Todo
-[] learning algorithm: rebalance network.
-    [] Inverse Matrix
+[.] learning algorithm: rebalance network.
+    [o] Weight rebalance
 [o] evaluation: make output.
     [o] Matrix multiplication
 [] data representation: taking inputs.
+    [] Serialize data. (not necessary)
 [] network description: saving result.
 [] varies hidden layer: customizer.
 '''
@@ -128,11 +129,25 @@ class NeuralNetwork:
         # load the checkpoint.
         # -
 
+        # load datasets
+        ''' Serialize inputs
+        loop through files, and entries
+        maybe jsonl.
+        What kind of data? What context?
+        The network should be able to auto scale vertically.
+        Because neuron is float64, this means any input should
+        be in in 8 bytes. (Python doesn't have this limit, but
+        but I just want it to be true.)
+        The real goal of this AI is to have AI work with real
+        world. So Webcam, Microphone. But, it's impossible.
+        My PC can't move. The only working solution is to put
+        it on phone. Compile for Android, or have my AI server.
+        '''
+
         # calculate difference
         # -
 
         # adjust the model
-
         self.rebalance()
 
         #raise NotImplementedError("Not ready to learn, yet")
@@ -186,7 +201,7 @@ class NeuralNetwork:
             print_matrix(self.weight_t[i],padding,precision)
 
 
-x = NeuralNetwork(list(range(1,50)),list(range(1,40)),3)
+x = NeuralNetwork(list(range(1,5)),list(range(1,4)),3)
 print("input", x.input)
 print("output", x.output)
 # for i in range(x.depth+1):
