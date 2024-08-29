@@ -9,8 +9,8 @@
 [] varies hidden layer: customizer.
 '''
 
-'''create filled matrix'''
 def create_matrix(rows,cols,fill=0):
+    '''create filled matrix'''
     col_t = []
     for i in range(rows):
         row_t = []
@@ -19,47 +19,37 @@ def create_matrix(rows,cols,fill=0):
         col_t.append(row_t)
     return col_t
 
-'''X x Y-transposed'''
-def matrix_multipy(X,Y_t):
-    '''Still need some more check, row-column restriction.
-    I don't check because that is writing a new mathlib.
-    I can just use numpy and I already planed to use it.
-    '''
-
-    is_X_vec = type(X[0]) == list
-    is_Y_vec = type(Y_t[0]) == list
-
-    # since this is X x Y_t, we only need to check equal length
-    # zip with strict=true is better.
-
-    if(not is_X_vec and not is_Y_vec):
-        #print("vector x vector")
-        return [
-            sum(a*b for a,b in zip(X,Y_t,strict=True))
-        ]
-
-    elif(not is_X_vec and is_Y_vec):
-        #print("vector x matrix")
-        return [
-            sum(a*b for a,b in zip(X,Y_col,strict=True))
-            for Y_col in zip(*Y_t)
-        ]    
+def matrix_transpose(X):
+    if(type(X[0])!=list):
+        return X
     
-    elif(is_X_vec and not is_Y_vec):
-        #print("matrix x vector")
-        return [
-            sum(a*b for a,b in zip(X_row,Y_t,strict=True))
-            for X_row in zip(X)
-        ]    
-    else:
-        # matrix multiplied matrix
-        return [
-            [
-                sum(a*b for a,b in zip(X_row,Y_col,strict=True)) 
-                for Y_col in zip(*Y_t)
-            ] 
-                for X_row in X
-        ]
+    rows = len(X)
+    cols = len(X[0])
+    temp = create_matrix(cols,rows)
+    for i in range(rows):
+        for j in range(cols):
+            temp[j][i]=X[i][j]
+    return temp
+
+
+def matrix_multipy(X,Y):
+    return [
+        [
+            sum(a*b for a,b in zip(X_row,Y_col,strict=True)) 
+            for Y_col in zip(*Y)
+        ] 
+            for X_row in X
+    ]
+
+# Print matrix prettier
+def print_matrix(mat,padding = 6,precision = 2):
+    for row in mat:
+        line = ""
+        for val in row:
+            line += format(float(val),'.{}f'.format(precision)).rjust(padding)+"\t"
+        line = line[:-1]
+        print(line)
+
 
 class NeuralNetwork:
     def __init__(self, vec_in = [], vec_out = [], depth = 0):
@@ -86,9 +76,12 @@ class NeuralNetwork:
             # number of matrixes match depth
             for l in range(depth):
                 mat = create_matrix(height,width)
+                # W_t row
                 for i in range(height):
+                    # W_t col
                     for j in range(width):
-                        mat[i][j] = m*(j%width+1) # test value
+                        # mat[i][j] = m*(j%width+1) # test value
+                        mat[i][j] = (i*width+j+1)/(width*height)
                         # mat[i][j] = m # real value
                 self.weight_t.append(mat)
             
@@ -100,7 +93,10 @@ class NeuralNetwork:
             for i in range(height):
                 for j in range(out_height):
                     if(i==j):
-                        mat_fin[i][j]=1
+                        mat_fin[i][j] = 1
+                        mat_fin[(height-i-1) % height][j] = m
+                        # diagonal down = 1, diagonal up = 0.5
+                        # why not [j][i]? because memory out-of-bound
 
             self.weight_t.append(mat_fin)
 
@@ -117,13 +113,14 @@ class NeuralNetwork:
         # Calculation is done by chained multiplication of weight matrix.
         '''
         # imediate state
-        vec_im = self.input
+        vec_im = [self.input]
+        print("vec_im",vec_im)
         for i in range(self.depth+1):
             vec_im = matrix_multipy(vec_im, self.weight_t[i])
             print("L="+str(i))
             print(" ",vec_im)
-            # self.print_matrix(vec_im)
-        self.output = vec_im
+            # print_matrix(vec_im)
+        self.output = vec_im[0]
         #print("result:", vec_im)
 
     def learn(self):
@@ -135,10 +132,41 @@ class NeuralNetwork:
         # -
 
         # adjust the model
-        # rebalance weight matrix
 
-        raise NotImplementedError("Not ready to learn, yet")
+        self.rebalance()
+
+        #raise NotImplementedError("Not ready to learn, yet")
     
+    def rebalance(self):
+        # rebalance weight matrix
+        for layer in range(self.depth+1):
+            Mat = self.weight_t[layer]
+
+            # summing node weights
+            summer = None
+            width = len(Mat)
+            summer = list(range(width))
+
+            print("L{}".format(layer))
+
+            for item in summer: 
+                summer[item] = 1
+
+            print("summer", summer)
+
+            w_sum = matrix_multipy([summer], Mat)
+            print("Sum W", w_sum)
+
+            # divide weight matrix with collumn sum
+            Mat_t = Mat
+            t_width = len(Mat_t)
+            t_height = len(Mat_t[0])
+            for i in range(t_width):
+                for j in range(t_height):
+                    Mat_t[i][j] /= w_sum[0][j]
+            print("renorm")
+            print_matrix(Mat_t)
+
     def load_checkpoint(self):
         # File access
         # -
@@ -150,23 +178,15 @@ class NeuralNetwork:
     
     def print_weight_t(self,padding = 6,precision = 2):
         if len(self.weight_t) == 0:
-            print (self.weight_t)
+            print(self.weight_t)
             pass
 
         for i in range(self.depth+1):
-            print("\nL"+ str(i) if (i != self.depth) else "fin")
-            self.print_matrix(self.weight_t[i],padding,precision)
+            print("\nL"+ str(i) if (i != self.depth) else "\nfin")
+            print_matrix(self.weight_t[i],padding,precision)
 
-    # Print matrix prettier
-    def print_matrix(self,mat,padding = 6,precision = 2):
-        for row in mat:
-            line = ""
-            for val in row:
-                line += format(float(val),'.{}f'.format(precision)).rjust(padding)+"\t"
-            line = line[:-1]
-            print(line)
 
-x = NeuralNetwork(list(range(1,5)),list(range(1,4)),3)
+x = NeuralNetwork(list(range(1,50)),list(range(1,40)),3)
 print("input", x.input)
 print("output", x.output)
 # for i in range(x.depth+1):
@@ -176,4 +196,7 @@ x.print_weight_t()
 print("run")
 x.run()
 print("output:", x.output)
-#x.learn()
+print("\nlearn")
+x.learn()
+# for i in range(x.depth+1):
+#     print("weight {}:\n".format(i), x.weight_t[i])
