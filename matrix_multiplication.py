@@ -37,4 +37,14 @@ result = [
     Well, it is what it is.
 '''
 
+A = [[1,2,3,4]]
+res =[
+    [
+        sum(a*b for a,b in zip(X_row,Y_col)) 
+        for Y_col in zip(*Y)] 
+        for X_row in A
+    ]
+
 printMatrix(result)
+print("V x M")
+printMatrix(res)
